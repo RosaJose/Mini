@@ -1,0 +1,170 @@
+package ch.epfl.cs107.play.game.tutorial;
+
+import com.sun.glass.events.KeyEvent;
+import com.sun.prism.paint.Color;
+
+import ch.epfl.cs107.play.game.Game;
+import ch.epfl.cs107.play.game.actor.ImageGraphics;
+import ch.epfl.cs107.play.game.actor.ShapeGraphics;
+import ch.epfl.cs107.play.io.FileSystem;
+import ch.epfl.cs107.play.math.Circle;
+import ch.epfl.cs107.play.math.Entity;
+import ch.epfl.cs107.play.math.EntityBuilder;
+import ch.epfl.cs107.play.math.PartBuilder;
+import ch.epfl.cs107.play.math.Polygon;
+import ch.epfl.cs107.play.math.RevoluteConstraintBuilder;
+import ch.epfl.cs107.play.math.RopeConstraintBuilder;
+import ch.epfl.cs107.play.math.Transform;
+import ch.epfl.cs107.play.math.Vector;
+import ch.epfl.cs107.play.math.World;
+import ch.epfl.cs107.play.window.Window;
+
+/**
+ * Simple game, to show basic the basic architecture
+ */
+public class ScaleGame implements Game {
+	private ImageGraphics graphicBlock;
+	private ImageGraphics graphicBall;
+	private ImageGraphics graphicPlank;
+	
+	
+	private Entity block;
+	private Entity plank;
+	private Entity ball;
+
+    // Store context
+    private Window window;
+    
+    // We need our physics engine
+    private World world;
+    
+	@Override
+	public boolean begin(Window window, FileSystem fileSystem) {
+	
+	world = new World();
+    	world.setGravity(new Vector(0.0f, -9.81f));
+  	
+        // Store context
+        this.window = window;
+    	
+    	
+    	
+    	// create two new objects to build
+    EntityBuilder entityBuilder1 = world.createEntityBuilder(); //block
+    EntityBuilder entityBuilder2 = world.createEntityBuilder(); //plank
+    EntityBuilder entityBuilder3= world.createEntityBuilder(); //ball
+    
+    //make sure it doesnt move
+ 	entityBuilder1.setFixed(true);
+ 	entityBuilder2.setFixed(false);
+ 	entityBuilder3.setFixed(false);
+ 	
+ 	//define initial position
+ 	entityBuilder1.setPosition(new Vector(-5.f, -1.f));
+ 	entityBuilder2.setPosition(new Vector(-2.5f, 0.8f));
+ 	entityBuilder3.setPosition(new Vector(0.5f, 4.f));
+ 	
+ 	//build body
+ 	block = entityBuilder1.build();
+ 	// At this point, your body is in the world, but it has no geometry // You need to use another builder to add shapes
+ 	PartBuilder partBuilder = block.createPartBuilder();
+ 	// Create a square polygon, and set the shape of the builder to
+ 	//this polygon
+ 	Polygon polygon = new Polygon(
+ 			new Vector(0.0f, 0.0f), 
+ 			new Vector(10.0f, 0.0f), 
+ 			new Vector(10.0f, 1.0f),
+ 			new Vector(0.0f, 1.0f) );
+ 	partBuilder.setShape(polygon);
+ 	partBuilder.setFriction(0.5f);
+
+ 	// Finally, do not forget the following line.
+ 	partBuilder.build();
+ 	// Note : we do not need to keep a reference on partBuilder
+	
+ 	//assign geometric form to plank
+ 	plank = entityBuilder2.build();
+	PartBuilder partBuilder2 = plank.createPartBuilder();
+	Polygon polygon2 = new Polygon(
+ 			new Vector(0.0f, 0.0f), 
+ 			new Vector(5.0f, 0.0f), 
+ 			new Vector(5.0f, 0.2f),
+ 			new Vector(0.0f, 0.2f) );
+	partBuilder2.setShape(polygon2);
+ 	partBuilder2.build();
+ 	
+ 	//ASSIGN GEOMETRIC FOR TO BALL
+ 	ball = entityBuilder3.build();
+ 	PartBuilder partBuilder3 = ball.createPartBuilder();
+ 	Circle circle = new Circle(0.5f);
+ 	partBuilder3.setShape(circle);
+ 	partBuilder3.build();
+ 	
+
+	//graphics entities
+ 	float ballRadius = circle.getRadius();
+	graphicBlock = new ImageGraphics("stone.broken.4.png", 10f, 1f);
+	graphicPlank = new ImageGraphics("wood.3.png",5f,0.2f);
+	graphicBall = new ImageGraphics("explosive.11.png", 2.0f*ballRadius, 2.0f * ballRadius, new Vector(0.5f, 0.5f));
+	
+
+	// Transparency can be chosen for each drawing (0.0 - transparent, 1.0 - opaque)
+	graphicBlock.setAlpha(1.0f);
+	graphicPlank.setAlpha(1.0f);
+	graphicBall.setAlpha(1.0f);
+	// Additionally, you can choose a depth when drawing
+	// Therefore, you could draw behind what you have already done 
+	graphicBlock.setDepth(10f);
+	graphicPlank.setDepth(10f);
+	graphicBall.setDepth(10f);
+	//
+	graphicBlock.setParent(block);
+	graphicPlank.setParent(plank);
+	graphicBall.setParent(ball);
+ 	
+float blockWidth = graphicBlock.getWidth();
+float blockHeight = graphicBlock.getHeight();
+float plankHeight = graphicPlank.getHeight();
+float plankWidth = graphicPlank.getWidth();
+RevoluteConstraintBuilder revoluteConstraintBuilder = world.createRevoluteConstraintBuilder();
+revoluteConstraintBuilder.setFirstEntity(block);
+revoluteConstraintBuilder.setFirstAnchor(new Vector(blockWidth/2,(blockHeight*7)/4));
+revoluteConstraintBuilder.setSecondEntity(plank); 
+revoluteConstraintBuilder.setSecondAnchor(new Vector(plankWidth/2,plankHeight/2));
+revoluteConstraintBuilder.setInternalCollision(true);
+revoluteConstraintBuilder.build();
+
+		return true;
+	}
+	 // This event is called at each frame
+    @Override
+    public void update(float deltaTime) {
+    	
+    	// Game logic comes here // Nothing to do, yet
+    	// Simulate physics
+    	// Our body is fixed, though, nothing will move world.update(deltaTime);
+    	// echelle a laquelle on voit l'objet
+    	world.update(deltaTime);
+    	window.setRelativeTransform(Transform.I.scaled(10.0f));
+    	graphicBlock.draw(window);
+    	graphicBall.draw(window);
+    	graphicPlank.draw(window);
+
+//ball actionned by keys computer
+    	if (window.getKeyboard().get(KeyEvent.VK_LEFT).isDown()) { 
+    		ball.applyAngularForce(10.0f);
+    	} else if (window.getKeyboard().get(KeyEvent.VK_RIGHT).isDown()) { 
+    		ball.applyAngularForce(-10.0f);
+    	}
+    	//
+
+        // The actual rendering will be done now, by the program loop
+    }
+
+    // This event is raised after game ends, to release additional resources
+    @Override
+    public void end() {
+        // Empty on purpose, no cleanup required yet
+    }
+    
+}
